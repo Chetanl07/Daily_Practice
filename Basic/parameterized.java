@@ -2,7 +2,7 @@
 public class parameterized {
     public static void main(String []args)
     {
-        Dog puppy= new Dog("raj", "White", 2.2, 1);
+        Dog puppy= new Dog("puppy","white",2.2,1);
         System.out.println(puppy);
 
     }
@@ -22,10 +22,6 @@ class Dog{
         this.age=age;
 
     }
-
-    
-
-   
 
     public String getName() {
         return name;
