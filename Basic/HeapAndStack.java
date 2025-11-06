@@ -18,6 +18,17 @@ public class HeapAndStack {
         System.out.println(h1.i1);
         h1=null;
         return h1;
+    } 
+
+    public Integer getI1() {
+        return i1;
     }
+
+    public void setI1(Integer i1) {
+        this.i1 = i1;
+    }
+
+
+
     
 }
