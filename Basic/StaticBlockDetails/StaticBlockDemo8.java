@@ -1,5 +1,7 @@
+// static final blank field have a default value 
+
 public class StaticBlockDemo8 {
-    final static int x; //
+    final static int x; // static final blank field
     static 
     {
         m1();
