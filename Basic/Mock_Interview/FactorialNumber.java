@@ -15,6 +15,7 @@ public class FactorialNumber {
             factorial*=i;
         }
         System.out.println("Factorial of "+x+" is: "+factorial);
+        sc.close();
     }
 
     
