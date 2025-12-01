@@ -18,7 +18,7 @@ public class FindAlphabetAndOccurrence {
                 count++;
             }
         }
-        System.out.println("The character "+target+"appears"+count+"times in the string "+str);
+        System.out.println("The character "+target+" appears "+count+" times in the string "+str);
 
 
     }
