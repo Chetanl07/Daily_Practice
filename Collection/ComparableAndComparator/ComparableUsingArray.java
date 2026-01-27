@@ -1,4 +1,4 @@
-
+// comparable interface using in array 
 import java.util.Arrays;
 
 public class ComparableUsingArray {
