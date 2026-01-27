@@ -1,3 +1,4 @@
+// simple program of sorting of vector element based on the name
 import java.util.Collections;
 import java.util.Vector;
 
