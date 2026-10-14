@@ -27,44 +27,57 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ matrix.java-version }}
 
-      - name: Compile Java Modules
+      - name: Compile Java Practice Files
         shell: bash
         run: |
           mkdir -p bin
-          rm -f compile_failures.log
-          total_dirs=0
-          total_files=0
+          rm -f compile_errors.log
+          success_count=0
+          fail_count=0
 
-          echo "========================================"
-          echo "Starting Java Compilation (JDK ${{ matrix.java-version }})"
-          echo "========================================"
+          echo "================================================="
+          echo "Compiling Java Practice Programs (JDK ${{ matrix.java-version }})"
+          echo "================================================="
 
-          while IFS= read -r dir; do
-            total_dirs=$((total_dirs + 1))
-            find "$dir" -maxdepth 1 -name "*.java" > current_sources.txt
-            count=$(wc -l < current_sources.txt)
-            total_files=$((total_files + count))
-            
+          # Step 1: Compile packages first (e.g. BLC, ELC, Basic.Program)
+          echo "--- Phase 1: Compiling Packaged Modules ---"
+          find . -type f -name "*.java" -exec grep -l "^package " {} + 2>/dev/null > packaged_files.txt || true
+          if [ -s packaged_files.txt ]; then
+            sed -i 's/^/"/; s/$/"/' packaged_files.txt
+            javac -encoding UTF-8 -d bin -cp "bin:." @packaged_files.txt || true
+          fi
+          rm -f packaged_files.txt
+
+          # Step 2: Compile all standalone practice files individually
+          # (Prevents duplicate class name collisions across practice exercises)
+          echo "--- Phase 2: Compiling All Practice Files ---"
+          while IFS= read -r file; do
+            # Skip if it is not a regular file
+            [ -f "$file" ] || continue
+
+            dir=$(dirname "$file")
             mkdir -p "bin/$dir"
-            
-            echo "📁 Compiling ($count files): $dir"
-            if ! javac -encoding UTF-8 -d "bin/$dir" @current_sources.txt; then
-              echo "❌ Error compiling $dir" >> compile_failures.log
+
+            # Compile file individually with classpath and directory context
+            if javac -encoding UTF-8 -d bin -cp "bin:$dir:." "$file" 2>> compile_errors.log; then
+              success_count=$((success_count + 1))
+            else
+              echo "⚠️ Failed to compile: $file"
+              fail_count=$((fail_count + 1))
             fi
-          done < <(find . -type f -name "*.java" -not -path "*/.*" -not -path "./bin/*" -exec dirname {} \; | sort -u)
+          done < <(find . -type f -name "*.java" -not -path "*/.*" -not -path "./bin/*" | sort)
 
-          rm -f current_sources.txt
+          echo "================================================="
+          echo "Compilation Results: $success_count passed, $fail_count failed."
+          echo "================================================="
 
-          echo "========================================"
-          echo "Summary: Scanned $total_dirs directories, $total_files Java files."
-
-          if [ -f compile_failures.log ]; then
-            echo "❌ BUILD FAILED: Compilation issues found in:"
-            cat compile_failures.log
+          if [ $fail_count -gt 0 ]; then
+            echo "❌ BUILD FAILED: Compilation errors encountered:"
+            cat compile_errors.log
             exit 1
           fi
 
-          echo "✅ All Java source files compiled successfully!"
+          echo "✅ All Java practice files compiled successfully!"
 
       - name: Package Compiled Classes into JAR
         if: matrix.java-version == '21'
