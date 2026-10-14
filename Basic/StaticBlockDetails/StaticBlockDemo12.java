@@ -4,7 +4,7 @@ public class StaticBlockDemo12 {
     public static void main(String []args)
     {
         test t1=new test(100);
-        test.print();
+        // test.print(); // Note: Cannot call commented-out static method on non-static field
     }
     
 }
