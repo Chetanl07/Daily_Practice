@@ -1,0 +1,17 @@
+# Compiled Java class files
+*.class
+
+# Eclipse metadata and build outputs
+bin/
+*.tmp
+*.bak
+*.swp
+*~
+
+# Log files
+*.log
+
+# Temp files from build
+sources.txt
+java_sources.txt
+daily-practice.jar

@@ -1,1 +1,82 @@
+name: Java CI/CD Pipeline
 
+on:
+  push:
+    branches: [ "main", "master", "Chetanl07-SubBranch" ]
+  pull_request:
+    branches: [ "main", "master", "Chetanl07-SubBranch" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Verify (JDK ${{ matrix.java-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: [ '17', '21' ]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java-version }}
+
+      - name: Compile Java Modules
+        shell: bash
+        run: |
+          mkdir -p bin
+          rm -f compile_failures.log
+          total_dirs=0
+          total_files=0
+
+          echo "========================================"
+          echo "Starting Java Compilation (JDK ${{ matrix.java-version }})"
+          echo "========================================"
+
+          while IFS= read -r dir; do
+            total_dirs=$((total_dirs + 1))
+            find "$dir" -maxdepth 1 -name "*.java" > current_sources.txt
+            count=$(wc -l < current_sources.txt)
+            total_files=$((total_files + count))
+            
+            mkdir -p "bin/$dir"
+            
+            echo "📁 Compiling ($count files): $dir"
+            if ! javac -encoding UTF-8 -d "bin/$dir" @current_sources.txt; then
+              echo "❌ Error compiling $dir" >> compile_failures.log
+            fi
+          done < <(find . -type f -name "*.java" -not -path "*/.*" -not -path "./bin/*" -exec dirname {} \; | sort -u)
+
+          rm -f current_sources.txt
+
+          echo "========================================"
+          echo "Summary: Scanned $total_dirs directories, $total_files Java files."
+
+          if [ -f compile_failures.log ]; then
+            echo "❌ BUILD FAILED: Compilation issues found in:"
+            cat compile_failures.log
+            exit 1
+          fi
+
+          echo "✅ All Java source files compiled successfully!"
+
+      - name: Package Compiled Classes into JAR
+        if: matrix.java-version == '21'
+        shell: bash
+        run: |
+          jar -cf daily-practice.jar -C bin .
+          echo "📦 Created daily-practice.jar successfully."
+
+      - name: Upload Build Artifacts (Continuous Delivery)
+        if: matrix.java-version == '21'
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-practice-jar
+          path: daily-practice.jar
+          retention-days: 14
