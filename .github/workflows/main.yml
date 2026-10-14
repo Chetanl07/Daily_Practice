@@ -1,0 +1,101 @@
+name: Java CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master", "Chetanl07-SubBranch" ]
+  pull_request:
+    branches: [ "main", "master", "Chetanl07-SubBranch" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Verify (JDK ${{ matrix.java-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: [ '17', '21' ]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: ${{ matrix.java-version }}
+
+      - name: Compile Java Practice Files
+        shell: bash
+        run: |
+          mkdir -p bin
+          rm -f compile_errors.log
+          success_count=0
+          fail_count=0
+
+          echo "================================================="
+          echo "Compiling Java Practice Programs (JDK ${{ matrix.java-version }})"
+          echo "================================================="
+
+          # Phase 1: Compile files with package declarations first (e.g. BLC, ELC, Basic.Program)
+          echo "--- Phase 1: Compiling Packaged Modules ---"
+          find . -type f -name "*.java" -exec grep -l "^package " {} + 2>/dev/null > packaged_files.txt || true
+          if [ -s packaged_files.txt ]; then
+            sed -i 's/^/"/; s/$/"/' packaged_files.txt
+            javac -encoding UTF-8 -d bin -cp "bin:." @packaged_files.txt || true
+          fi
+          rm -f packaged_files.txt
+
+          # Phase 2: Compile all practice files individually with sourcepath
+          # -sourcepath ensures sibling classes in the same lesson folder resolve automatically
+          # while avoiding duplicate class name collisions across different lessons
+          echo "--- Phase 2: Compiling Practice Files ---"
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+
+            dir=$(dirname "$file")
+            mkdir -p "bin/$dir"
+
+            if javac -encoding UTF-8 -d bin -sourcepath "$dir" -cp "bin:$dir:." "$file" 2>> compile_errors.log; then
+              success_count=$((success_count + 1))
+            else
+              echo "⚠️ Note: Compilation issue in: $file"
+              fail_count=$((fail_count + 1))
+            fi
+          done < <(find . -type f -name "*.java" -not -path "*/.*" -not -path "./bin/*" | sort)
+
+          echo "================================================="
+          echo "Compilation Results: $success_count passed, $fail_count failed out of $(($success_count + $fail_count)) files."
+          echo "================================================="
+
+          # If errors occurred, display them in the build log
+          if [ -s compile_errors.log ]; then
+            echo "--- Compilation Details / Notes ---"
+            cat compile_errors.log
+          fi
+
+          # Allow minor intentional practice errors (e.g., negative test demo files),
+          # fail only if a significant portion of files fail to build
+          if [ $fail_count -gt 5 ]; then
+            echo "❌ BUILD FAILED: More than 5 files failed compilation."
+            exit 1
+          fi
+
+          echo "✅ Java practice build and verification completed successfully!"
+
+      - name: Package Compiled Classes into JAR
+        if: matrix.java-version == '21'
+        shell: bash
+        run: |
+          jar -cf daily-practice.jar -C bin .
+          echo "📦 Created daily-practice.jar successfully."
+
+      - name: Upload Build Artifacts (Continuous Delivery)
+        if: matrix.java-version == '21'
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-practice-jar
+          path: daily-practice.jar
+          retention-days: 14

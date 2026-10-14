@@ -6,7 +6,7 @@ public class firstProgram {
 }
 }
 class Animal 
-{firs
+{
     public void eat()
     {
         System.out.println("Generic Eating");
